@@ -1,0 +1,121 @@
+# 扫码视觉门上位机默认配置（结构对应 README §11.14）
+# 生效规则：
+#   - network / dio 通道映射 / 相机 IP：需重启运行时
+#   - logging.level：可热切换
+#   - runtime.mode：仅待机时允许切换
+#   - trigger.* 窗口参数：可在线调整，建议空闲时保存
+# 任意字段都可用环境变量覆盖，例如：VISION_GATE__TRIGGER__TAIL_DELAY_MS=60
+
+app:
+  site_name: "WM QR Gate"
+  device_id: "VG-01"
+  line_id: "LINE-01"
+  debug: false
+
+runtime:
+  mode: "LR"                    # LR 左右扫 / FB 前后扫
+  line_speed_mm_s: 800          # 标称线速；测速异常时回退使用
+  speed_tolerance: 0.4          # 实测速度允许偏离标称值的比例，超出则回退标称值
+  track_ttl_ms: 1500            # 单个 BoxTrack 最长生命周期
+  tick_interval_ms: 10          # 窗口/会话定时检查周期
+  self_check_timeout_s: 5       # 启动自检等待设备上线的时间
+
+trigger:
+  scan_mode: "continuous_window"   # continuous_window 持续扫码 / burst_trigger 单次触发降级
+  sensor_distance_mm: 120          # PE1→PE2 间距（README §4.2 建议 100~150）
+  default_box_length_mm: 350       # 未测得箱长前用于预测离开读码区
+  read_zone_margin_mm: 50          # 预测离开读码区时附加的余量
+  window_lead_ms: 150              # 窗口最多提前于"箱头到达读码面"多少 ms 打开（不早于 PE2）
+  window_tolerance_ms: 30          # 绑定时窗口边界容差
+  result_grace_ms: 60              # 窗口关闭后再等待迟到结果的时间，然后判定
+  trigger_timeout_ms: 300          # 会话启动/触发指令超时
+  camera_result_timeout_ms: 500    # 窗口打开后完全无返回的上限
+  min_box_gap_mm: 50               # 最小允许箱距
+  gap_violation_policy: "ng"       # ng 箱距过小判 NG / alarm_only 仅报警
+  tail_delay_ms: 80
+  idle_off_delay_ms: 150
+  track_hold_after_ok_ms: 50
+  max_track_window_ms: 400
+  allow_single_camera_ok: true
+  ambiguity_policy: "ng"           # ng 异码判 AMBIGUOUS / first 取首个码
+  burst_count: 4                   # burst_trigger 模式下每窗口触发次数（3~5）
+  burst_interval_ms: 40
+  consecutive_no_read_alarm: 3     # 连续 N 箱未读报警
+  unbound_alarm_suppress_ms: 1500  # 同一码值的 UNBOUND_RESULT 报警抑制时间
+
+network:
+  # 现场按 README §6.2 填写：eth0_bind=192.168.10.10, eth1_bind=192.168.20.10
+  # 留空表示由系统路由选择网卡（开发环境）
+  eth0_bind: ""
+  eth1_bind: ""
+
+camera:
+  camera_a:
+    id: "CAM_A"
+    enabled: true
+    host: "192.168.1.79"
+    read_port: 1024              # 结果推送端口（长连接）
+    trigger_port: 1025           # 指令端口（短连接发送 start/stop）
+    pe2_offset_mm: 360           # PE2→该相机读码面距离
+    result_latency_ms: 0         # 结果时间补偿：result_ts = 收到时刻 - latency
+    payload_format: "json"       # json / text
+    start_cmd: "start"
+    stop_cmd: "stop"
+    trigger_cmd: "start"
+  camera_b:
+    id: "CAM_B"
+    enabled: false               # 现场目前只接了一台；接入第二台后改为 true
+    host: "192.168.1.80"
+    read_port: 1024
+    trigger_port: 1025
+    pe2_offset_mm: 360
+    result_latency_ms: 0
+    payload_format: "json"
+
+dio:
+  driver: "modbus"               # modbus 远程 IO 模块 / rk3588 本机 DI-DO / simulator
+  host: "192.168.1.117"
+  port: 501
+  unit_id: 1
+  timeout_s: 3.0
+  poll_interval_ms: 5
+  debounce_ms: 4
+  pe_stuck_on_ms: 5000           # 光电持续遮挡超过该时间报警
+  gpio_di_pins: []               # driver=rk3588 时按通道号填 GPIO 编号
+  gpio_do_pins: []
+  di_map:
+    pe1: 0
+    pe2: 1
+  do_map:
+    ok: 0
+    ng: 1
+    reject: 2
+  pulse_ms:
+    ok: 80
+    ng: 120
+    reject: 200
+
+report:
+  scheduler:
+    enabled: false
+    host: "127.0.0.1"
+    port: 8080
+    heartbeat_interval_s: 5
+  mes:
+    enabled: false
+    host: "127.0.0.1"
+    port: 9090
+  retry_interval_s: 5
+  max_cache: 1000
+
+storage:
+  db_path: "data/app.db"
+  log_dir: "logs"
+  export_dir: "exports"
+  archive_dir: "data/archive"
+  archive_raw_payload: true
+
+logging:
+  level: "INFO"
+  console: true
+
