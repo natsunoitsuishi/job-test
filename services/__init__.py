@@ -1,35 +1,7 @@
-"""
-服务层模块
-
-包含运行时服务、事件总线、健康检查等核心服务
-"""
-from .archive_service import ArchiveService, BoxTrackingData
-from .event_bus import EventBus, create_event_bus, event_listener
+from .archive_service import ArchiveService
+from .event_bus import EventBus
 from .health_service import HealthService
+from .report_service import ReportService
+from .runtime_service import RuntimeService
 
-# 可选：如果存在其他服务
-# from .archive_service import ArchiveService
-# from .config_service import ConfigService
-
-__all__ = [
-    # 事件总线
-    "EventBus",
-    "create_event_bus",
-    "event_listener",
-
-    # 运行时服务
-    "RuntimeService",
-
-    # 健康检查
-    "HealthService",
-
-    # 其他服务（如果存在）
-    # "ArchiveService",
-    # "ConfigService",
-
-    # 位置推算
-    "ArchiveService",
-    "BoxTrackingData",
-]
-
-__version__ = "1.0.0"
+__all__ = ["ArchiveService", "EventBus", "HealthService", "ReportService", "RuntimeService"]
