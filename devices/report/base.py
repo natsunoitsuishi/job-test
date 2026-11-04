@@ -1,29 +1,52 @@
-"""
-上报客户端基类
-"""
+"""上报接口抽象（README §11.17）。返回 bool 表示是否送达；缓存与重试由服务层负责。"""
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-import logging
+
+from domain.enums import DecisionStatus
 
 
-class BaseReportClient(ABC):
-    """上报客户端抽象基类"""
-
-    def __init__(self, name: str = "report"):
-        self.name = name
-        self.logger = logging.getLogger(f"{name}_client")
-        self._connected = False
+class SchedulerClient(ABC):
+    enabled: bool = True
 
     @abstractmethod
-    async def connect(self) -> bool:
-        """建立连接"""
-        pass
+    async def connect(self) -> None: ...
 
     @abstractmethod
-    async def disconnect(self) -> None:
-        """断开连接"""
-        pass
+    async def disconnect(self) -> None: ...
 
-    @property
-    def is_connected(self) -> bool:
-        """是否已连接"""
-        return self._connected
+    @abstractmethod
+    async def report_result(self, payload: dict) -> bool: ...
+
+    @abstractmethod
+    async def report_heartbeat(self, payload: dict) -> bool: ...
+
+
+class MesClient(ABC):
+    enabled: bool = True
+
+    @abstractmethod
+    async def connect(self) -> None: ...
+
+    @abstractmethod
+    async def disconnect(self) -> None: ...
+
+    @abstractmethod
+    async def report_scan_record(self, payload: dict) -> bool: ...
+
+
+class PlcClient(ABC):
+    @abstractmethod
+    async def connect(self) -> None: ...
+
+    @abstractmethod
+    async def disconnect(self) -> None: ...
+
+    @abstractmethod
+    async def notify_ready(self, value: bool) -> None: ...
+
+    @abstractmethod
+    async def notify_scan_result(self, result: DecisionStatus, track_id: str) -> None: ...
+
+    @abstractmethod
+    async def notify_reject(self, track_id: str) -> None: ...

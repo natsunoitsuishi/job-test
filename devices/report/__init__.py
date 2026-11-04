@@ -1,22 +1,29 @@
-"""
-上报客户端模块
+from __future__ import annotations
 
-提供与上层系统（调度上位机、MES）的接口
-"""
+from typing import Optional
 
-from .base import BaseReportClient
-from .scheduler_client import SchedulerClient
-from .mes_client import MesClient
+from config.schema import AppConfig
+from devices.dio.base import BaseDiDoService
 
-# 可选：如果需要 NoopClient，可以添加
-# from .noop_client import NoopClient
+from .base import MesClient, PlcClient, SchedulerClient
+from .mes_client import HttpMesClient
+from .noop_client import NoopMesClient, NoopPlcClient, NoopSchedulerClient
+from .plc_client import DioPlcClient
+from .scheduler_client import TcpSchedulerClient
 
-__all__ = [
-    "BaseReportClient",
-    "SchedulerClient",
-    "MesClient",
-    # "NoopClient",
-]
 
-# 版本信息
-__version__ = "1.0.0"
+def create_report_clients(cfg: AppConfig, dio: Optional[BaseDiDoService] = None
+                          ) -> tuple[SchedulerClient, MesClient, PlcClient]:
+    """上报走 ETH1（network.eth1_bind）；未启用的返回 Noop。"""
+    bind = cfg.network.eth1_bind
+    sched: SchedulerClient = (TcpSchedulerClient(cfg.report.scheduler, bind)
+                              if cfg.report.scheduler.enabled else NoopSchedulerClient())
+    mes: MesClient = HttpMesClient(cfg.report.mes, bind) if cfg.report.mes.enabled else NoopMesClient()
+    plc: PlcClient = (DioPlcClient(dio) if dio is not None and DioPlcClient.READY_NAME in cfg.dio.do_map
+                      else NoopPlcClient())
+    return sched, mes, plc
+
+
+__all__ = ["DioPlcClient", "HttpMesClient", "MesClient", "NoopMesClient", "NoopPlcClient",
+           "NoopSchedulerClient", "PlcClient", "SchedulerClient", "TcpSchedulerClient",
+           "create_report_clients"]
